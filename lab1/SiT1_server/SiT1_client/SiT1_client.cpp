@@ -13,6 +13,7 @@ int main() {
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
 
+    // Создаем сокет
     SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (clientSocket == INVALID_SOCKET) {
         std::cerr << "Socket creation failed" << std::endl;
@@ -20,11 +21,13 @@ int main() {
         return -1;
     }
 
+    // Конфигурируем адрес сервера
     sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
     inet_pton(AF_INET, SERVER_IP, &serverAddr.sin_addr);
     serverAddr.sin_port = htons(SERVER_PORT);
 
+    // Подключаемся к серверу
     if (connect(clientSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
         std::cerr << "Connection failed" << std::endl;
         closesocket(clientSocket);
@@ -45,13 +48,13 @@ int main() {
 
     int msgLength = htonl(message.length());
 
-    // Send the string length
+    // Отправляем длину строки
     send(clientSocket, (char*)&msgLength, sizeof(msgLength), 0);
 
-    // Send the string
+    // Отправляем строку
     send(clientSocket, message.c_str(), message.length(), 0);
 
-    // Receive the response (half of the string)
+    // Получаем ответ
     char buffer[128];
     int received = recv(clientSocket, buffer, sizeof(buffer), 0);
     if (received > 0) {

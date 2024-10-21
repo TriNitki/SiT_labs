@@ -4,45 +4,42 @@ using System.Text;
 
 namespace SiT2_receiver;
 
-class Program
+internal class Program
 {
     static void Main(string[] args)
     {
-        // Your Gmail credentials
-        var username = "fsb2004pro@gmail.com";
-        var password = "hcmb wthg qkpf qtyj";
+        const string username = "fsb2004pro@gmail.com";
+        const string password = "hcmb wthg qkpf qtyj";
 
-        // Connect to the Gmail IMAP server (IMAP over SSL port: 993)
-        using var client = new TcpClient("imap.gmail.com", 993);
-        using (var sslStream = new SslStream(client.GetStream()))
-        {
-            sslStream.AuthenticateAsClient("imap.gmail.com");
+        using var client = new TcpClient("imap.gmail.com", 993); // Создаем TCP соединение
+        using var sslStream = new SslStream(client.GetStream()); // Создаем ssl поток для нашего клиента
+        sslStream.AuthenticateAsClient("imap.gmail.com");
 
-            using (var reader = new StreamReader(sslStream, Encoding.ASCII))
-            using (var writer = new StreamWriter(sslStream, Encoding.ASCII))
-            {
-                writer.AutoFlush = true;
-                Console.WriteLine("Connected to Gmail IMAP server over SSL...");
+        using var reader = new StreamReader(sslStream, Encoding.ASCII); // Читатель соединения
+        using var writer = new StreamWriter(sslStream, Encoding.ASCII); // Писатель соединения
 
-                Console.WriteLine(ReadResponse(reader, "*"));
+        writer.AutoFlush = true;
+        Console.WriteLine("Connected to Gmail IMAP server over SSL...");
 
-                SendCommand(writer, reader, $"a1 LOGIN \"{username}\" \"{password}\"\r\n");
+        Console.WriteLine(ReadResponse(reader, "*"));
 
-                SendCommand(writer, reader, "a2 SELECT INBOX\r\n");
+        // Авторизируемся
+        SendCommand(writer, reader, $"a1 LOGIN \"{username}\" \"{password}\"\r\n");
 
-                var id = GetIdCommand(writer, reader);
-                SendCommand(writer, reader, $"a4 FETCH {id} (BODY[TEXT] BODY[HEADER.FIELDS (FROM TO SUBJECT DATE)])\r\n");
+        // Переходим во вкладку входящих
+        SendCommand(writer, reader, "a2 SELECT INBOX\r\n");
 
-                SendCommand(writer, reader, "a5 LOGOUT\r\n");
-            }
-        }
+        // Получаем id последнего письма
+        var id = GetIdCommand(writer, reader);
+        SendCommand(writer, reader, $"a4 FETCH {id} (BODY[TEXT] BODY[HEADER.FIELDS (FROM TO SUBJECT DATE)])\r\n");
+
+        SendCommand(writer, reader, "a5 LOGOUT\r\n");
     }
 
 
-
-    static string ReadResponse(StreamReader reader, string commandTag)
+    private static string ReadResponse(StreamReader reader, string commandTag)
     {
-        StringBuilder response = new StringBuilder();
+        var response = new StringBuilder();
 
         while (reader.ReadLine() is { } line)
         {
@@ -53,9 +50,10 @@ class Program
         return response.ToString();
     }
 
-    static string GetIdCommand(StreamWriter writer, StreamReader reader)
+    private static string GetIdCommand(StreamWriter writer, StreamReader reader)
     {
-        var command = "a3 SEARCH ALL\r\n";
+        // Получаем все письма
+        const string command = "a3 SEARCH ALL\r\n";
         var commandTag = command.Split(' ')[0];
 
         Console.WriteLine($"Sending: {command}");
@@ -66,7 +64,7 @@ class Program
         return response;
     }
 
-    static void SendCommand(StreamWriter writer, StreamReader reader, string command)
+    private static void SendCommand(StreamWriter writer, StreamReader reader, string command)
     {
         var commandTag = command.Split(' ')[0];
 
